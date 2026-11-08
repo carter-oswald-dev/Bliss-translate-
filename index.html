@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bliss Narrower — say exactly what you mean in Blissymbols</title>
+<meta name="description" content="Type English, answer a few plain questions (one or many? now or before?), and get the exact Blissymbols you mean.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M8 32 L20 8 L32 32 M14 20 L26 20' fill='none' stroke='%232f5bd3' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 32 L20 8 L32 32 M14 20 L26 20" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="36" r="2" fill="currentColor"/></svg>
+    <div>
+      <h1>Bliss Narrower</h1>
+      <p class="tag">Type it in English. Answer a few easy questions. Get the Blissymbols you <em>actually</em> mean.</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="translate">Translate</button>
+    <button role="tab" aria-selected="false" data-tab="browse">Dictionary</button>
+    <button role="tab" aria-selected="false" data-tab="about">How it works</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-translate" class="tab on">
+    <div class="dock" id="dock">
+    <form id="inputForm" class="inputRow" autocomplete="off">
+      <label for="src" class="sr">English sentence</label>
+      <input id="src" type="text" placeholder="e.g. you want to eat apples" spellcheck="true">
+      <button type="submit" class="primary">Translate</button>
+    </form>
+    <div class="examples">Try:
+      <button class="ex" type="button">I am happy</button>
+      <button class="ex" type="button">you want to eat</button>
+      <button class="ex" type="button">they ate the apples</button>
+      <button class="ex" type="button">we will go to the house</button>
+      <button class="ex" type="button">thank you</button>
+      <label class="toggle"><input type="checkbox" id="optGender"> Ask about male / female forms</label>
+    </div>
+
+    <div id="status" class="status" hidden></div>
+
+    <section id="resultWrap" hidden>
+      <div class="resultHead">
+        <h2>Your Bliss sentence</h2>
+        <div class="funnel" id="funnel" title="How many different Bliss sentences your English could still mean"></div>
+      </div>
+      <div class="keyline" id="keyline">
+        <span><i class="sw red"></i>red: program couldn't tell — tap to choose</span>
+        <span><i class="sw yellow"></i>yellow: auto-filled from your English — tap to check</span>
+        <span><i class="sw green"></i>green: set by you</span>
+      </div>
+      <div id="strip" class="strip" aria-live="polite"></div>
+    </section>
+    </div>
+
+    <p id="skipped" class="skipped"></p>
+      <div id="actions">
+      <details class="export" open>
+        <summary>Export</summary>
+        <div class="exrow">
+          <label>Layout
+            <select id="exStyle">
+              <option value="strip">Plain strip</option>
+              <option value="boxes">Boxes (communication board)</option>
+            </select></label>
+          <label>Word label
+            <select id="exLabel">
+              <option value="above">Above symbol</option>
+              <option value="below">Below symbol</option>
+              <option value="none">No label</option>
+            </select></label>
+          <span id="exBoxOpts" class="exrow" hidden>
+            <label class="chk"><input type="checkbox" id="exColour" checked> Colour boxes by word type</label>
+            <label>Boxes per row <input type="number" id="exPerRow" value="8" min="1" max="30"></label>
+          </span>
+        </div>
+        <div class="exrow viewrow">
+          <span class="seg" role="radiogroup" aria-label="Preview">
+            <label><input type="radio" name="exView" value="image" checked> Image (SVG / PNG)</label>
+            <label><input type="radio" name="exView" value="text"> Text art (TXT)</label>
+          </span>
+          <span id="exTextOpts" class="exrow" hidden>
+            <label>Detail
+              <select id="exRows">
+                <option value="16">Small (16 lines tall)</option>
+                <option value="24">Medium (24 lines)</option>
+                <option value="32" selected>Large (32 lines)</option>
+                <option value="48">Extra large (48 lines)</option>
+              </select></label>
+            <label>Filled pixel
+              <select id="exFill">
+                <option value="o" selected>o</option>
+                <option value="#">#</option>
+                <option value="@">@</option>
+                <option value="X">X</option>
+                <option value="█">█ (block)</option>
+              </select></label>
+          </span>
+        </div>
+        <div class="exprev" id="exPreview" aria-label="Export preview"></div>
+        <div class="legend small"><span><span class="dot" style="background:#fff1b8"></span>thing</span><span><span class="dot" style="background:#ffd9d4"></span>action</span><span><span class="dot" style="background:#d8f0da"></span>describing</span><span><span class="dot" style="background:#d6e6fb"></span>person</span><span><span class="dot" style="background:#fff"></span>small word</span><span><span class="dot" style="background:#eceef2"></span>expression</span></div>
+        <div class="actions">
+          <button type="button" id="dlSvg" class="primary">Download SVG</button>
+          <button type="button" id="dlPng" class="primary">Download PNG</button>
+          <button type="button" id="dlTxt" class="primary">Download TXT</button>
+          <button type="button" id="copyTxt">Copy text art</button>
+          <button type="button" id="copyGloss">Copy word-by-word meaning</button>
+        </div>
+      </details>
+      </div>
+    <div id="pop" class="pop" role="dialog" aria-modal="false" hidden></div>
+  </section>
+
+  <section id="tab-browse" class="tab">
+    <div class="inputRow">
+      <label for="q" class="sr">Search the dictionary</label>
+      <input id="q" type="search" placeholder="Search 6,000+ symbols in English (e.g. house, happy, to go)">
+    </div>
+    <div class="legend" id="legend"></div>
+    <div id="grid" class="grid"></div>
+    <dialog id="detail"></dialog>
+  </section>
+
+  <section id="tab-about" class="tab prose">
+    <h2>Why this exists</h2>
+    <p>Blissymbols can say things very precisely, but most tools make you already know the grammar. For example, there are separate symbols for <b>I</b> (just one person) and <b>we</b> (a group that includes me), and a small mark that turns one thing into many. If a tool never asks, you can't tell it which one you meant.</p>
+    <p>Bliss Narrower works the other way round: it starts from every symbol your words <em>could</em> mean, then asks short, plain questions to narrow it down. The counter at the top shows how many different meanings are still possible, and it drops to <b>1</b> when everything is settled.</p>
+    <h3>The questions it can ask</h3>
+    <table class="qtable">
+      <tr><th>Question</th><th>Plain words</th><th>Grammar name</th></tr>
+      <tr><td>Who is it about?</td><td>"Just me" or "me and others"</td><td>singular / plural (first person)</td></tr>
+      <tr><td>How many people are you talking to?</td><td>"one friend" or "the whole group"</td><td>singular / plural (second person)</td></tr>
+      <tr><td>People or things?</td><td>"they (my friends)" or "they (the boxes)"</td><td>personal / impersonal pronoun</td></tr>
+      <tr><td>How many?</td><td>"one apple" or "lots of apples"</td><td>singular / plural noun</td></tr>
+      <tr><td>When?</td><td>"I eat" / "I ate" / "I will eat" / "I would eat"</td><td>present / past / future / conditional</td></tr>
+      <tr><td>What kind of word?</td><td>"to drink" (doing) or "a drink" (thing)</td><td>verb / noun / adjective</td></tr>
+      <tr><td>Which meaning?</td><td>pick from pictures</td><td>word sense</td></tr>
+    </table>
+    <h3>Good to know</h3>
+    <ul>
+      <li>Little words like <i>a</i>, <i>an</i>, <i>the</i>, <i>will</i> and <i>did</i> are usually left out. Bliss shows that information with marks on the other symbols instead.</li>
+      <li>Indicators (the small marks on top) are placed where the original symbol had one, or centred if it had none.</li>
+      <li>This is a helper, not an official translator. Check important messages with someone who knows Bliss well.</li>
+    </ul>
+    <h3>Credits</h3>
+    <p>Symbol shapes and vocabulary come from the BCI Authorized Vocabulary (BCI-AV) published by Blissymbolics Communication International. See the README for licence details.</p>
+  </section>
+</main>
+
+<footer class="foot">Blissymbols © Blissymbolics Communication International · BCI-AV vocabulary · Not an official BCI tool</footer>
+<script src="app.js"></script>
+</body>
+</html>
