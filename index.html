@@ -113,11 +113,17 @@
       </details>
       <details class="export sigil" open>
         <summary>Sigil art</summary>
-        <p class="hint">Turns your sentence into one drawing, read from top to bottom. Only symbols made entirely of straight lines are used; ones with curves (like the heart) are skipped.</p>
+        <p class="hint">Turns your sentence into one drawing, read from top to bottom, then on to the next column to the right. Only symbols made entirely of straight lines are used; ones with curves (like the heart) are skipped.</p>
         <div class="exrow">
           <button type="button" id="sgMake" class="primary">Make sigil</button>
           <label>Overlap <input type="range" id="sgOverlap" min="0" max="100" value="55"></label>
           <label>Line weight <input type="range" id="sgWeight" min="3" max="16" value="7"></label>
+          <label>Symbols per column
+            <select id="sgPerCol">
+              <option value="0">No limit (one column)</option>
+              <option value="2">2</option><option value="3">3</option><option value="4" selected>4</option>
+              <option value="5">5</option><option value="6">6</option><option value="8">8</option><option value="10">10</option>
+            </select></label>
           <label class="chk"><input type="checkbox" id="sgMirror" checked> Mirror (symmetrical)</label>
           <label class="chk"><input type="checkbox" id="sgSpine" checked> Centre line</label>
           <label class="chk"><input type="checkbox" id="sgEnds" checked> Start / end marks</label>

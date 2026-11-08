@@ -194,11 +194,12 @@ pre.ascii{margin:0;font:11px/1.15 ui-monospace,Menlo,Consolas,"DejaVu Sans Mono"
 /* sigil */
 .sigil .hint{margin:8px 0 0}
 .sigil .exrow input[type=range]{width:110px;accent-color:var(--accent)}
+.sigil .exrow select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sigil .exrow button.primary{padding:6px 16px;background:var(--accent);color:#fff;border:0;border-radius:8px}
 .sglist{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:.8rem}
 .sgi{padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
 .sgi.use{background:#e3f4e9;border-color:#9fd3b3;color:#226b43}
 .sgi.skip{background:#f3f3f5;color:var(--muted);text-decoration:line-through}
 .sgprev{margin-top:10px;border:1px dashed var(--line);border-radius:8px;padding:12px;background:#fafafa;display:flex;justify-content:center}
-.sgprev svg{max-height:520px;width:auto;max-width:100%;height:auto}
+.sgprev .sgimg{display:block;max-width:100%;max-height:520px;width:auto;height:auto}
 .sigil .actions button.primary{padding:6px 14px;background:var(--accent);color:#fff;border:1px solid var(--accent)}

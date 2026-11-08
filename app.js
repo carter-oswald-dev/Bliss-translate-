@@ -722,24 +722,54 @@ function sigilOpts() {
     spine: $('#sgSpine').checked,
     ends: $('#sgEnds').checked,
     weight: +$('#sgWeight').value,
+    perCol: Math.max(0, +$('#sgPerCol').value || 0),
   };
 }
-function sigilSVG(o = sigilOpts(), forExport = false) {
-  const used = (sigilSnapshot || []).filter(x => x.straight);
-  if (!used.length) return '';
-  // place each symbol's lines in a column, centred, each one lower than the last
-  let y = 0, all = [];
+// one column of the sigil, centred on x = 0, starting at y = 0
+function sigilColumn(used, o, first, last) {
+  let y = 0, segs = [];
   for (const u of used) {
-    const segs = segmentsOf(u.e, u.ind);
-    if (!segs.length) continue;
-    const xs = segs.flatMap(s => [s[0], s[2]]), ys = segs.flatMap(s => [s[1], s[3]]);
+    const ss = segmentsOf(u.e, u.ind);
+    if (!ss.length) continue;
+    const xs = ss.flatMap(s => [s[0], s[2]]), ys = ss.flatMap(s => [s[1], s[3]]);
     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
     const cx = (minX + maxX) / 2, h = Math.max(maxY - minY, 16);
-    for (const s of segs) all.push([s[0] - cx, s[1] - minY + y, s[2] - cx, s[3] - minY + y]);
+    for (const s of ss) segs.push([s[0] - cx, s[1] - minY + y, s[2] - cx, s[3] - minY + y]);
     y += h * (1 - o.overlap) + (o.overlap >= 1 ? 0 : 8);
   }
-  if (!all.length) return '';
-  if (o.mirror) all = all.concat(all.map(s => [-s[0], s[1], -s[2], s[3]]));
+  if (!segs.length) return null;
+  if (o.mirror) segs = segs.concat(segs.map(s => [-s[0], s[1], -s[2], s[3]]));
+  const ys = segs.flatMap(s => [s[1], s[3]]);
+  let top = Math.min(...ys), bot = Math.max(...ys);
+  const ext = o.ends ? 24 : 0;
+  if (o.spine) segs.push([0, top - ext, 0, bot + ext]);
+  if (o.ends) {
+    const t = top - 24, b = bot + 24, r = 9;
+    if (first) segs.push([0, t - r, r, t], [r, t, 0, t + r], [0, t + r, -r, t], [-r, t, 0, t - r]);   // start: diamond
+    else segs.push([-9, t - 9, 0, t], [0, t, 9, t - 9]);                                              // continued from the left: v
+    if (last) segs.push([-18, b, 18, b]);                                                               // end: crossbar
+    else segs.push([-9, b - 9, 0, b], [0, b, 9, b - 9]);                                              // continues to the right: v
+    top = t - (first ? r : 9); bot = b;
+  }
+  const half = Math.max(...segs.flatMap(s => [Math.abs(s[0]), Math.abs(s[2])]), 20);
+  return { segs, half, top, bot };
+}
+function sigilSVG(o = sigilOpts(), scale = 1) {
+  const used = (sigilSnapshot || []).filter(x => x.straight && segmentsOf(x.e, x.ind).length);
+  if (!used.length) return '';
+  const per = o.perCol > 0 ? o.perCol : used.length;
+  const groups = [];
+  for (let i = 0; i < used.length; i += per) groups.push(used.slice(i, i + per));
+  const cols = groups.map((g, i) => sigilColumn(g, o, i === 0, i === groups.length - 1)).filter(Boolean);
+  // lay columns out left to right, tops aligned
+  const gapX = 40, pad = 24 + o.weight;
+  const top = Math.min(...cols.map(c => c.top)), bot = Math.max(...cols.map(c => c.bot));
+  let x = pad, all = [];
+  for (const c of cols) {
+    const ox = x + c.half, oy = pad - top;
+    for (const s of c.segs) all.push([s[0] + ox, s[1] + oy, s[2] + ox, s[3] + oy]);
+    x += c.half * 2 + gapX;
+  }
   // drop duplicate lines (same ends, either direction)
   const seen = new Set();
   all = all.filter(s => {
@@ -747,30 +777,18 @@ function sigilSVG(o = sigilOpts(), forExport = false) {
     const k = a < b ? a + '|' + b : b + '|' + a;
     if (seen.has(k)) return false; seen.add(k); return true;
   });
-  const ys = all.flatMap(s => [s[1], s[3]]), xs = all.flatMap(s => [s[0], s[2]]);
-  let top = Math.min(...ys), bot = Math.max(...ys);
-  const half = Math.max(...xs.map(Math.abs), 20);
-  const extra = [];
-  if (o.spine) extra.push([0, top - (o.ends ? 24 : 0), 0, bot + (o.ends ? 24 : 0)]);
-  if (o.ends) {
-    // start mark: a small diamond at the top; end mark: a crossbar at the bottom (straight lines only)
-    const t = top - 24, b = bot + 24, r = 9;
-    extra.push([0, t - r, r, t], [r, t, 0, t + r], [0, t + r, -r, t], [-r, t, 0, t - r]);
-    extra.push([-18, b, 18, b]);
-    top = t - r; bot = b;
-  }
-  const lines = all.concat(extra);
-  const pad = 24 + o.weight, W = half * 2 + pad * 2, H = bot - top + pad * 2;
-  const d = lines.map(s => `M${(s[0] + half + pad).toFixed(1)} ${(s[1] - top + pad).toFixed(1)}L${(s[2] + half + pad).toFixed(1)} ${(s[3] - top + pad).toFixed(1)}`).join('');
-  const size = forExport ? ` width="${Math.round(W * 1.5)}" height="${Math.round(H * 1.5)}"` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}"${size}><rect width="100%" height="100%" fill="#fff"/>` +
+  const W = x - gapX + pad, H = bot - top + pad * 2;
+  const d = all.map(s => `M${s[0].toFixed(1)} ${s[1].toFixed(1)}L${s[2].toFixed(1)} ${s[3].toFixed(1)}`).join('');
+  // explicit width/height so every browser (Safari included) knows how big to draw it
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * scale)}" height="${Math.round(H * scale)}" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}"><rect width="100%" height="100%" fill="#fff"/>` +
     `<path d="${d}" fill="none" stroke="#000" stroke-width="${o.weight}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 function renderSigil() {
   const box = $('#sgPreview'), list = $('#sgList');
   if (!sigilSnapshot) { box.innerHTML = '<p class="skipped">Press <b>Make sigil</b> to build one from your current sentence.</p>'; list.innerHTML = ''; return; }
   const svg = sigilSVG();
-  box.innerHTML = svg || '<p class="skipped">None of these symbols are made only of straight lines, so there is nothing to build from. Try words like <i>I</i>, <i>we</i>, <i>person</i>, <i>house</i>, <i>big</i> or <i>work</i>.</p>';
+  // shown as an <img> of the SVG: sized reliably in every browser
+  box.innerHTML = svg ? `<img class="sgimg" alt="Sigil made from your sentence" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}">` : '<p class="skipped">None of these symbols are made only of straight lines, so there is nothing to build from. Try words like <i>I</i>, <i>we</i>, <i>person</i>, <i>house</i>, <i>big</i> or <i>work</i>.</p>';
   list.innerHTML = sigilSnapshot.map((x, i) =>
     `<span class="sgi ${x.straight ? 'use' : 'skip'}" title="${x.straight ? 'used' : 'skipped: has curves'}">${i + 1}. ${esc(x.label)}${x.straight ? '' : ' (curved, skipped)'}</span>`).join('');
   $('#sgDl').hidden = !svg;
@@ -935,9 +953,9 @@ function bind() {
   ['exStyle', 'exLabel', 'exColour', 'exPerRow', 'exRows', 'exFill'].forEach(id => $('#' + id).addEventListener('input', renderExportPreview));
   document.querySelectorAll('input[name=exView]').forEach(r => r.addEventListener('change', renderExportPreview));
   $('#sgMake').addEventListener('click', () => { takeSigilSnapshot(); renderSigil(); });
-  ['sgOverlap', 'sgMirror', 'sgSpine', 'sgEnds', 'sgWeight'].forEach(id => $('#' + id).addEventListener('input', renderSigil));
-  $('#sgSvg').addEventListener('click', () => download('bliss-sigil.svg', new Blob([sigilSVG(sigilOpts(), true)], { type: 'image/svg+xml' })));
-  $('#sgPng').addEventListener('click', () => svgToPNG(sigilSVG(sigilOpts(), true), 'bliss-sigil.png'));
+  ['sgOverlap', 'sgMirror', 'sgSpine', 'sgEnds', 'sgWeight', 'sgPerCol'].forEach(id => $('#' + id).addEventListener('input', renderSigil));
+  $('#sgSvg').addEventListener('click', () => download('bliss-sigil.svg', new Blob([sigilSVG(sigilOpts(), 1.5)], { type: 'image/svg+xml' })));
+  $('#sgPng').addEventListener('click', () => svgToPNG(sigilSVG(sigilOpts(), 1.5), 'bliss-sigil.png'));
   $('#dlTxt').addEventListener('click', () => {
     const o = exportOpts();
     download(o.style === 'boxes' ? 'bliss-boxes.txt' : 'bliss-sentence.txt', new Blob([asciiArt(o)], { type: 'text/plain;charset=utf-8' }));

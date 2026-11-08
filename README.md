@@ -37,6 +37,7 @@ On phones the pop-up opens as a sheet from the bottom of the screen. A counter s
   - *Mirror:* reflects the drawing so it is symmetrical.
   - *Centre line:* a vertical line running through the whole sigil.
   - *Start / end marks:* a diamond at the top and a crossbar at the bottom.
+  - *Symbols per column:* caps how tall the sigil gets (2–10 symbols, or no limit). When a column is full, the next symbols start a new column to the right. A small *v* at the bottom of one column and the top of the next shows where reading continues.
   It exports as SVG or PNG.
 - Searchable dictionary of all 6,182 BCI-AV symbols, colour-coded by word type
 - Export as SVG or PNG, with a live preview, in two layouts:
