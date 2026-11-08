@@ -111,6 +111,24 @@
           <button type="button" id="copyGloss">Copy word-by-word meaning</button>
         </div>
       </details>
+      <details class="export sigil" open>
+        <summary>Sigil art</summary>
+        <p class="hint">Turns your sentence into one drawing, read from top to bottom. Only symbols made entirely of straight lines are used; ones with curves (like the heart) are skipped.</p>
+        <div class="exrow">
+          <button type="button" id="sgMake" class="primary">Make sigil</button>
+          <label>Overlap <input type="range" id="sgOverlap" min="0" max="100" value="55"></label>
+          <label>Line weight <input type="range" id="sgWeight" min="3" max="16" value="7"></label>
+          <label class="chk"><input type="checkbox" id="sgMirror" checked> Mirror (symmetrical)</label>
+          <label class="chk"><input type="checkbox" id="sgSpine" checked> Centre line</label>
+          <label class="chk"><input type="checkbox" id="sgEnds" checked> Start / end marks</label>
+        </div>
+        <div class="sglist" id="sgList"></div>
+        <div class="sgprev" id="sgPreview"><p class="skipped">Press <b>Make sigil</b> to build one from your current sentence.</p></div>
+        <div class="actions" id="sgDl" hidden>
+          <button type="button" id="sgSvg" class="primary">Download sigil SVG</button>
+          <button type="button" id="sgPng" class="primary">Download sigil PNG</button>
+        </div>
+      </details>
       </div>
     <div id="pop" class="pop" role="dialog" aria-modal="false" hidden></div>
   </section>

@@ -31,6 +31,13 @@ On phones the pop-up opens as a sheet from the bottom of the screen. A counter s
 - Optional male/female pronoun forms (turned off by default, as most Bliss users don't mark gender)
 - Multi-word entries such as *thank you*
 - Words with no match get a search box. Pick a close symbol, or leave the word as text.
+- **Sigil art:** press *Make sigil* to turn the current sentence into a single drawing, read from top to bottom. Only symbols made entirely of straight lines are used; ones with curves, circles or letters (like the heart) are skipped, and the list shows which were used and which were skipped. Options:
+  - *Overlap:* how much each symbol overlaps the one above it.
+  - *Line weight:* thickness of the lines.
+  - *Mirror:* reflects the drawing so it is symmetrical.
+  - *Centre line:* a vertical line running through the whole sigil.
+  - *Start / end marks:* a diamond at the top and a crossbar at the bottom.
+  It exports as SVG or PNG.
 - Searchable dictionary of all 6,182 BCI-AV symbols, colour-coded by word type
 - Export as SVG or PNG, with a live preview, in two layouts:
   - **Plain strip:** the symbols in a row.

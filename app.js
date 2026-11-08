@@ -690,6 +690,101 @@ function asciiBoxes(syms, o, withLabel) {
   return out.join('\n') + '\n';
 }
 
+// ---------- Sigil art ----------
+// Uses only symbols drawn entirely with straight lines (no curves, circles or letters),
+// stacks them top-to-bottom in sentence order, overlaps them, and optionally mirrors them.
+let sigilSnapshot = null;   // symbols captured when "Make sigil" was pressed
+function isStraight(e, ind) {
+  return symParts(e, ind).every(p => !/A|<circle|<text/.test(p.m));
+}
+function segmentsOf(e, ind) {
+  const segs = [];
+  for (const { m, dx } of symParts(e, ind)) {
+    for (const [, d] of m.matchAll(/<path d="([^"]*)"/g)) {
+      for (const [, x1, y1, x2, y2] of d.matchAll(/M(-?[\d.]+) (-?[\d.]+)L(-?[\d.]+) (-?[\d.]+)/g)) {
+        if (x1 === x2 && y1 === y2) continue;            // a dot, not a line
+        segs.push([+x1 + dx, +y1, +x2 + dx, +y2]);
+      }
+    }
+  }
+  return segs;
+}
+function takeSigilSnapshot() {
+  const items = resolved.filter(x => x.r && x.r.e && x.s.type !== 'punct');
+  sigilSnapshot = items.map(({ s, r }) => ({
+    e: r.e, ind: r.ind, label: glossFor(s, r), straight: isStraight(r.e, r.ind),
+  }));
+}
+function sigilOpts() {
+  return {
+    overlap: +$('#sgOverlap').value / 100,
+    mirror: $('#sgMirror').checked,
+    spine: $('#sgSpine').checked,
+    ends: $('#sgEnds').checked,
+    weight: +$('#sgWeight').value,
+  };
+}
+function sigilSVG(o = sigilOpts(), forExport = false) {
+  const used = (sigilSnapshot || []).filter(x => x.straight);
+  if (!used.length) return '';
+  // place each symbol's lines in a column, centred, each one lower than the last
+  let y = 0, all = [];
+  for (const u of used) {
+    const segs = segmentsOf(u.e, u.ind);
+    if (!segs.length) continue;
+    const xs = segs.flatMap(s => [s[0], s[2]]), ys = segs.flatMap(s => [s[1], s[3]]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const cx = (minX + maxX) / 2, h = Math.max(maxY - minY, 16);
+    for (const s of segs) all.push([s[0] - cx, s[1] - minY + y, s[2] - cx, s[3] - minY + y]);
+    y += h * (1 - o.overlap) + (o.overlap >= 1 ? 0 : 8);
+  }
+  if (!all.length) return '';
+  if (o.mirror) all = all.concat(all.map(s => [-s[0], s[1], -s[2], s[3]]));
+  // drop duplicate lines (same ends, either direction)
+  const seen = new Set();
+  all = all.filter(s => {
+    const a = `${Math.round(s[0])},${Math.round(s[1])}`, b = `${Math.round(s[2])},${Math.round(s[3])}`;
+    const k = a < b ? a + '|' + b : b + '|' + a;
+    if (seen.has(k)) return false; seen.add(k); return true;
+  });
+  const ys = all.flatMap(s => [s[1], s[3]]), xs = all.flatMap(s => [s[0], s[2]]);
+  let top = Math.min(...ys), bot = Math.max(...ys);
+  const half = Math.max(...xs.map(Math.abs), 20);
+  const extra = [];
+  if (o.spine) extra.push([0, top - (o.ends ? 24 : 0), 0, bot + (o.ends ? 24 : 0)]);
+  if (o.ends) {
+    // start mark: a small diamond at the top; end mark: a crossbar at the bottom (straight lines only)
+    const t = top - 24, b = bot + 24, r = 9;
+    extra.push([0, t - r, r, t], [r, t, 0, t + r], [0, t + r, -r, t], [-r, t, 0, t - r]);
+    extra.push([-18, b, 18, b]);
+    top = t - r; bot = b;
+  }
+  const lines = all.concat(extra);
+  const pad = 24 + o.weight, W = half * 2 + pad * 2, H = bot - top + pad * 2;
+  const d = lines.map(s => `M${(s[0] + half + pad).toFixed(1)} ${(s[1] - top + pad).toFixed(1)}L${(s[2] + half + pad).toFixed(1)} ${(s[3] - top + pad).toFixed(1)}`).join('');
+  const size = forExport ? ` width="${Math.round(W * 1.5)}" height="${Math.round(H * 1.5)}"` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}"${size}><rect width="100%" height="100%" fill="#fff"/>` +
+    `<path d="${d}" fill="none" stroke="#000" stroke-width="${o.weight}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function renderSigil() {
+  const box = $('#sgPreview'), list = $('#sgList');
+  if (!sigilSnapshot) { box.innerHTML = '<p class="skipped">Press <b>Make sigil</b> to build one from your current sentence.</p>'; list.innerHTML = ''; return; }
+  const svg = sigilSVG();
+  box.innerHTML = svg || '<p class="skipped">None of these symbols are made only of straight lines, so there is nothing to build from. Try words like <i>I</i>, <i>we</i>, <i>person</i>, <i>house</i>, <i>big</i> or <i>work</i>.</p>';
+  list.innerHTML = sigilSnapshot.map((x, i) =>
+    `<span class="sgi ${x.straight ? 'use' : 'skip'}" title="${x.straight ? 'used' : 'skipped: has curves'}">${i + 1}. ${esc(x.label)}${x.straight ? '' : ' (curved, skipped)'}</span>`).join('');
+  $('#sgDl').hidden = !svg;
+}
+function svgToPNG(svg, name) {
+  const img = new Image();
+  img.onload = () => {
+    const k = 2, c = document.createElement('canvas'); c.width = img.width * k; c.height = img.height * k;
+    const g = c.getContext('2d'); g.scale(k, k); g.drawImage(img, 0, 0);
+    c.toBlob(b => download(name, b), 'image/png');
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 // BCI word-type colours, as light tints for box backgrounds
 const BOX_FILL = { YELLOW: '#fff1b8', RED: '#ffd9d4', GREEN: '#d8f0da', BLUE: '#d6e6fb', WHITE: '#ffffff', GRAY: '#eceef2' };
 function exportOpts() {
@@ -839,6 +934,10 @@ function bind() {
   $('#dlPng').addEventListener('click', toPNG);
   ['exStyle', 'exLabel', 'exColour', 'exPerRow', 'exRows', 'exFill'].forEach(id => $('#' + id).addEventListener('input', renderExportPreview));
   document.querySelectorAll('input[name=exView]').forEach(r => r.addEventListener('change', renderExportPreview));
+  $('#sgMake').addEventListener('click', () => { takeSigilSnapshot(); renderSigil(); });
+  ['sgOverlap', 'sgMirror', 'sgSpine', 'sgEnds', 'sgWeight'].forEach(id => $('#' + id).addEventListener('input', renderSigil));
+  $('#sgSvg').addEventListener('click', () => download('bliss-sigil.svg', new Blob([sigilSVG(sigilOpts(), true)], { type: 'image/svg+xml' })));
+  $('#sgPng').addEventListener('click', () => svgToPNG(sigilSVG(sigilOpts(), true), 'bliss-sigil.png'));
   $('#dlTxt').addEventListener('click', () => {
     const o = exportOpts();
     download(o.style === 'boxes' ? 'bliss-boxes.txt' : 'bliss-sentence.txt', new Blob([asciiArt(o)], { type: 'text/plain;charset=utf-8' }));
@@ -899,5 +998,5 @@ async function boot() {
 }
 boot();
 // exposed for testing
-window.__bliss = { buildSlots: t => buildSlots(t), resolve, get slots() { return slots; }, rasterSymbol, BYID: () => BYID, asciiArt };
+window.__bliss = { sigilSVG, takeSigilSnapshot, get sigilSnapshot() { return sigilSnapshot; }, buildSlots: t => buildSlots(t), resolve, get slots() { return slots; }, rasterSymbol, BYID: () => BYID, asciiArt };
 })();
